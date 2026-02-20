@@ -85,8 +85,10 @@ class WtTelemetry:
             return False
 
         resp_json = json.loads(resp.decode("utf-8", errors="ignore"))
-        valid = resp_json.get("valid", False)
-        return valid
+        if isinstance(resp_json, dict):
+            return resp_json.get("valid", False)
+        # Response should be valid if it's not empty or has a dict with a valid key, wt logic...
+        return True
 
     async def indicators(self) -> AsyncGenerator[TankIndicator | InvalidState | Dict]:
         async for resp in self._poll_endpoint(Endpoints.INDICATORS, interval=0):
@@ -239,12 +241,9 @@ class WtTelemetry:
                 yield resp
 
 async def main():
-    async with WtTelemetry() as telemetry:
-        async for msg in telemetry.hud_messages():
-            if isinstance(msg, Damage):
-                logger.debug(msg)
-            if isinstance(msg, Event):
-                logger.error(msg)
+    async with WtTelemetry() as wt:
+        async for msg in wt.map_objs():
+            logger.debug(msg)
 
 
 

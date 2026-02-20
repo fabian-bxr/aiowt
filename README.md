@@ -1,6 +1,5 @@
 <div align="center">
 <h1> aiowt - War Thunder Telemetry </h1>
-<hr>
 
 Asynchronous Python Wrapper for the War Thunder local telemetry API using asyncio and Pydantic.  
 Query live vehicle state, map data, missions and messages.   
@@ -20,19 +19,12 @@ pip install git+https://github.com/fabian-bxr/aiowt.git
 import asyncio
 from aiowt import WtTelemetry
 
-async def query_once():
-    ...
-
-
 async def loop():
     async with WtTelemetry() as wt:
         async for data in wt.indicators():
             print(data)
 
-asyncio.gather(
-    query_once(),
-    loop()
-)
+asyncio.run(loop())
 ````
 ## Endpoints 
 ### `indicators`
