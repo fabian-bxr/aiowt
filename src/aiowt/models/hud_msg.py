@@ -9,7 +9,10 @@ class Damage(BaseModel):
     enemy: bool
     mode: str
 
+class Event(BaseModel):
+    id: int
+    msg: str
 
 class HudMsg(BaseModel):
-    events: List[str]
+    events: List[Event]
     damage: List[Damage]
