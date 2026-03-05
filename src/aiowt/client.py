@@ -177,6 +177,14 @@ class WtTelemetry:
         # Yield each chat message when a new one is received
         max_id = 0  # For tracking highest ID received
         params = {"lastId": 0}  # Mutable dict to query chat messages
+
+        resp = await self._fetch_endpoint(Endpoints.GAMECHAT, params=params)
+        msgs = GameChat.model_validate_json(resp)
+        params["lastId"] = msgs.root[-1].id if msgs.root else 0
+        logger.debug(
+            f"Start Chat-ID: {params['lastId']}, Max-ID: {max_id}"
+        )
+
         async for resp in self._poll_endpoint(
             Endpoints.GAMECHAT, interval=1, params=params
         ):
@@ -204,6 +212,13 @@ class WtTelemetry:
         max_evt_id = 0
         max_dmg_id = 0
         params = {"lastEvt": 0, "lastDmg": 0}
+
+        resp = await self._fetch_endpoint(Endpoints.HUD_MSG, params=params)
+
+        msgs = HudMsg.model_validate_json(resp)
+        params["lastDmg"] = msgs.damage[-1].id if msgs.damage else 0
+        logger.debug(f"Start Damage-ID: {params['lastDmg']}")
+
 
         async for resp in self._poll_endpoint(Endpoints.HUD_MSG, interval=1, params=params):
             try:
@@ -242,7 +257,7 @@ class WtTelemetry:
 
 async def main():
     async with WtTelemetry() as wt:
-        async for msg in wt.map_objs():
+        async for msg in wt.hud_messages():
             logger.debug(msg)
 
 

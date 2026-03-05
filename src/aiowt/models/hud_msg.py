@@ -8,6 +8,7 @@ class Damage(BaseModel):
     sender: str
     enemy: bool
     mode: str
+    time: int
 
 class Event(BaseModel):
     id: int
