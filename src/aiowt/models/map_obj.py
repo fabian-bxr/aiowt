@@ -19,12 +19,12 @@ class MapObject(BaseModel):
     dy: Optional[float] = None
     team: Optional[Literal["friendly", "enemy"]] = None
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def set_team(self):
-        if self.color in ['#fa0C00', '#f00C00']:
-            self.team = 'enemy'
+        if self.color in ["#fa0C00", "#f00C00"]:
+            self.team = "enemy"
         else:
-            self.team = 'friendly'
+            self.team = "friendly"
         return self
 
 
@@ -47,4 +47,4 @@ class MapObj(RootModel[List[MapObject]]):
         return MapObj(root=[obj for obj in self.root if obj.team == "friendly"])
 
     def player(self) -> Optional[MapObject]:
-        return next((obj for obj in self.root if obj.icon == 'Player'), None)
+        return next((obj for obj in self.root if obj.icon == "Player"), None)
