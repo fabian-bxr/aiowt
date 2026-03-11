@@ -10,9 +10,11 @@ class Damage(BaseModel):
     mode: str
     time: int
 
+
 class Event(BaseModel):
     id: int
     msg: str
+
 
 class HudMsg(BaseModel):
     events: List[Event]

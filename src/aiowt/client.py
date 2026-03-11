@@ -33,7 +33,17 @@ class Endpoints(StrEnum):
 
 
 class WtTelemetry:
+    """
+    Asynchronous client for War Thunder local telemetry API.
+    Handles polling various endpoints for game data like indicators, map details, missions, state, chat, and HUD messages.
+    Provides context manager support to handle aiohttp session lifecycle correctly.
+    """
+
     def __init__(self, base_url: str = "http://localhost:8111"):
+        """
+        Initializes the WtTelemetry client.
+        :param base_url: Base URL for War Thunder local telemetry API (default is http://localhost:8111)
+        """
         self.base_url = base_url
         self.self_session: Optional[aiohttp.ClientSession] = None
 
@@ -70,7 +80,7 @@ class WtTelemetry:
 
         while True:
             try:
-                #logger.debug(f"Fetching Endpoint {endpoint}, params={params}")
+                # logger.debug(f"Fetching Endpoint {endpoint}, params={params}")
                 resp = await self._fetch_endpoint(endpoint, params)
                 yield resp
             except aiohttp.ClientError as e:
@@ -81,7 +91,7 @@ class WtTelemetry:
             await asyncio.sleep(interval)
 
     def _is_valid_resp(self, resp: bytes) -> bool:
-        if resp == b'':
+        if resp == b"":
             return False
 
         resp_json = json.loads(resp.decode("utf-8", errors="ignore"))
@@ -90,7 +100,13 @@ class WtTelemetry:
         # Response should be valid if it's not empty or has a dict with a valid key, wt logic...
         return True
 
-    async def indicators(self) -> AsyncGenerator[TankIndicator | InvalidState | Dict]:
+    async def indicators(
+        self,
+    ) -> AsyncGenerator[TankIndicator | InvalidState | Dict, None]:
+        """
+        Polls the /indicators endpoint for vehicle specific data.
+        Valid for planes and tanks. Returns Dict for Air data currently. Returns TankIndicator for Tanks.
+        """
         async for resp in self._poll_endpoint(Endpoints.INDICATORS, interval=0):
             # Needs to check if Army == 'tank' or 'air', don't yield anything for ships as there are no indicators
             # Yield each query
@@ -103,7 +119,7 @@ class WtTelemetry:
                 army = resp_json.get("army")
 
                 if army == "tank":
-                    yield TankIndicator.model_validate_json(resp)
+                    yield TankIndicator.model_validate(resp_json)
                 elif army == "air":
                     yield resp_json
                 else:
@@ -160,6 +176,10 @@ class WtTelemetry:
                 logger.error(f"Validation error for Mission: {e}")
 
     async def states(self) -> AsyncGenerator[State | InvalidState, None]:
+        """
+        Polls the /state endpoint for aircraft state data.
+        Valid only when an aircraft is selected in the game.
+        """
         # Yield each query
         async for resp in self._poll_endpoint(Endpoints.STATE, interval=0):
             if not self._is_valid_resp(resp):
@@ -167,8 +187,6 @@ class WtTelemetry:
                 continue
 
             try:
-                continue
-                raise NotImplementedError("State for Aircraft not yet implemented")
                 yield State.model_validate_json(resp)
             except ValidationError as e:
                 logger.error(f"Validation error for State: {e}")
@@ -181,9 +199,7 @@ class WtTelemetry:
         resp = await self._fetch_endpoint(Endpoints.GAMECHAT, params=params)
         msgs = GameChat.model_validate_json(resp)
         params["lastId"] = msgs.root[-1].id if msgs.root else 0
-        logger.debug(
-            f"Start Chat-ID: {params['lastId']}, Max-ID: {max_id}"
-        )
+        logger.debug(f"Start Chat-ID: {params['lastId']}, Max-ID: {max_id}")
 
         async for resp in self._poll_endpoint(
             Endpoints.GAMECHAT, interval=1, params=params
@@ -219,8 +235,9 @@ class WtTelemetry:
         params["lastDmg"] = msgs.damage[-1].id if msgs.damage else 0
         logger.debug(f"Start Damage-ID: {params['lastDmg']}")
 
-
-        async for resp in self._poll_endpoint(Endpoints.HUD_MSG, interval=1, params=params):
+        async for resp in self._poll_endpoint(
+            Endpoints.HUD_MSG, interval=1, params=params
+        ):
             try:
                 hud_batch = HudMsg.model_validate_json(resp)
 
@@ -255,11 +272,11 @@ class WtTelemetry:
                 last_image = resp
                 yield resp
 
+
 async def main():
     async with WtTelemetry() as wt:
         async for msg in wt.hud_messages():
             logger.debug(msg)
-
 
 
 if __name__ == "__main__":
